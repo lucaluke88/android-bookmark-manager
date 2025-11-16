@@ -1,4 +1,4 @@
-package com.bookmarkmanager.data
+package com.lcst.bookmarkmanager.data
 
 import android.content.Context
 import androidx.room.Database

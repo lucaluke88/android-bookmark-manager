@@ -1,4 +1,4 @@
-package com.bookmarkmanager.data
+package com.lcst.bookmarkmanager.data
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey

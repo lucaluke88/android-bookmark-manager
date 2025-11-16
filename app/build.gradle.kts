@@ -5,15 +5,15 @@ plugins {
 }
 
 android {
-    namespace = "com.bookmarkmanager"
+    namespace = "com.lcst.bookmarkmanager"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.bookmarkmanager"
+        applicationId = "com.lcst.bookmarkmanager"
         minSdk = 19  // Increased from 16 due to library requirements (Material Design requires at least API 19)
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 3
+        versionName = "3.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

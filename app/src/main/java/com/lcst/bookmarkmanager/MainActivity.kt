@@ -1,4 +1,4 @@
-package com.bookmarkmanager
+package com.lcst.bookmarkmanager
 
 import android.Manifest
 import android.content.Intent
@@ -18,12 +18,12 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.bookmarkmanager.adapter.BookmarkAdapter
-import com.bookmarkmanager.data.Bookmark
-import com.bookmarkmanager.databinding.ActivityMainBinding
-import com.bookmarkmanager.databinding.DialogBookmarkBinding
-import com.bookmarkmanager.util.CsvUtil
-import com.bookmarkmanager.viewmodel.BookmarkViewModel
+import com.lcst.bookmarkmanager.adapter.BookmarkAdapter
+import com.lcst.bookmarkmanager.data.Bookmark
+import com.lcst.bookmarkmanager.databinding.ActivityMainBinding
+import com.lcst.bookmarkmanager.databinding.DialogBookmarkBinding
+import com.lcst.bookmarkmanager.util.CsvUtil
+import com.lcst.bookmarkmanager.viewmodel.BookmarkViewModel
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch

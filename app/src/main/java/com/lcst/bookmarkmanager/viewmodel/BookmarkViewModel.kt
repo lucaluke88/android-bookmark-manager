@@ -1,11 +1,11 @@
-package com.bookmarkmanager.viewmodel
+package com.lcst.bookmarkmanager.viewmodel
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.bookmarkmanager.data.Bookmark
-import com.bookmarkmanager.data.BookmarkDatabase
-import com.bookmarkmanager.repository.BookmarkRepository
+import com.lcst.bookmarkmanager.data.Bookmark
+import com.lcst.bookmarkmanager.data.BookmarkDatabase
+import com.lcst.bookmarkmanager.repository.BookmarkRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 

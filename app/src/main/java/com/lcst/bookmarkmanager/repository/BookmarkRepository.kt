@@ -1,7 +1,7 @@
-package com.bookmarkmanager.repository
+package com.lcst.bookmarkmanager.repository
 
-import com.bookmarkmanager.data.Bookmark
-import com.bookmarkmanager.data.BookmarkDao
+import com.lcst.bookmarkmanager.data.Bookmark
+import com.lcst.bookmarkmanager.data.BookmarkDao
 import kotlinx.coroutines.flow.Flow
 
 class BookmarkRepository(private val bookmarkDao: BookmarkDao) {

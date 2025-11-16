@@ -1,6 +1,6 @@
-package com.bookmarkmanager.util
+package com.lcst.bookmarkmanager.util
 
-import com.bookmarkmanager.data.Bookmark
+import com.lcst.bookmarkmanager.data.Bookmark
 import java.io.InputStream
 import java.io.OutputStream
 import java.io.PrintWriter

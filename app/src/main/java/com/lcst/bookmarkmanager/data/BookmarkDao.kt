@@ -1,4 +1,4 @@
-package com.bookmarkmanager.data
+package com.lcst.bookmarkmanager.data
 
 import androidx.lifecycle.LiveData
 import androidx.room.*

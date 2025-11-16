@@ -1,5 +1,8 @@
 # Bookmark Manager
 
+**Autore:** LCST  
+**Versione:** 3.0
+
 Un'applicazione Android per gestire i segnalibri del browser con supporto per import/export CSV, ricerca e Material Design 3 con modalità AMOLED.
 
 ## Caratteristiche

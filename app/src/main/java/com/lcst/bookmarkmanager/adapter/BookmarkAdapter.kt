@@ -1,12 +1,12 @@
-package com.bookmarkmanager.adapter
+package com.lcst.bookmarkmanager.adapter
 
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
-import com.bookmarkmanager.data.Bookmark
-import com.bookmarkmanager.databinding.ItemBookmarkBinding
+import com.lcst.bookmarkmanager.data.Bookmark
+import com.lcst.bookmarkmanager.databinding.ItemBookmarkBinding
 
 class BookmarkAdapter(
     private val onEditClick: (Bookmark) -> Unit,

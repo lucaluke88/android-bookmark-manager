@@ -23,6 +23,7 @@ import com.lcst.bookmarkmanager.data.Bookmark
 import com.lcst.bookmarkmanager.databinding.ActivityMainBinding
 import com.lcst.bookmarkmanager.databinding.DialogBookmarkBinding
 import com.lcst.bookmarkmanager.util.CsvUtil
+import com.lcst.bookmarkmanager.util.HtmlUtil
 import com.lcst.bookmarkmanager.viewmodel.BookmarkViewModel
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.flow.collectLatest
@@ -59,7 +60,7 @@ class MainActivity : AppCompatActivity() {
         ActivityResultContracts.GetContent()
     ) { uri ->
         if (uri != null) {
-            importFromCsv(uri)
+            importFromFile(uri)
         } else {
             Toast.makeText(this, "Nessun file selezionato", Toast.LENGTH_SHORT).show()
         }
@@ -282,8 +283,15 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun importFromCsv(uri: Uri) {
+    private fun importFromFile(uri: Uri) {
         try {
+            val fileName = getFileName(uri)
+            
+            // Determina il tipo di file dall'estensione
+            val isHtml = fileName?.endsWith(".html", ignoreCase = true) == true || 
+                        fileName?.endsWith(".htm", ignoreCase = true) == true
+            val isCsv = fileName?.endsWith(".csv", ignoreCase = true) == true
+            
             val inputStream = contentResolver.openInputStream(uri)
             if (inputStream == null) {
                 Toast.makeText(this, "Impossibile aprire il file selezionato", Toast.LENGTH_LONG).show()
@@ -291,9 +299,50 @@ class MainActivity : AppCompatActivity() {
             }
             
             inputStream.use { stream: InputStream ->
-                val bookmarks = CsvUtil.importBookmarks(stream)
+                val bookmarks = try {
+                    when {
+                        isHtml -> HtmlUtil.importBookmarksFromChromeHtml(stream)
+                        isCsv -> CsvUtil.importBookmarks(stream)
+                        else -> {
+                            // Se l'estensione non è chiara, prova prima HTML poi CSV
+                            try {
+                                // Riapri lo stream per provare HTML
+                                val htmlStream = contentResolver.openInputStream(uri)
+                                htmlStream?.use { 
+                                    HtmlUtil.importBookmarksFromChromeHtml(it)
+                                } ?: throw Exception("Impossibile aprire il file")
+                            } catch (e: Exception) {
+                                // Se HTML fallisce, prova CSV
+                                val csvStream = contentResolver.openInputStream(uri)
+                                csvStream?.use { 
+                                    CsvUtil.importBookmarks(it)
+                                } ?: throw Exception("Impossibile aprire il file")
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    // Se il parsing fallisce, prova l'altro formato come fallback
+                    try {
+                        val fallbackStream = contentResolver.openInputStream(uri)
+                        fallbackStream?.use { fallback ->
+                            if (isHtml) {
+                                CsvUtil.importBookmarks(fallback)
+                            } else {
+                                HtmlUtil.importBookmarksFromChromeHtml(fallback)
+                            }
+                        } ?: throw Exception("Impossibile aprire il file")
+                    } catch (fallbackException: Exception) {
+                        throw Exception("Impossibile importare il file. Formato non supportato o file corrotto.")
+                    }
+                }
+                
                 if (bookmarks.isEmpty()) {
-                    Toast.makeText(this, "Nessun segnalibro trovato nel file CSV", Toast.LENGTH_SHORT).show()
+                    val fileType = when {
+                        isHtml -> "HTML"
+                        isCsv -> "CSV"
+                        else -> ""
+                    }
+                    Toast.makeText(this, "Nessun segnalibro trovato nel file $fileType", Toast.LENGTH_SHORT).show()
                     return@use
                 }
                 
@@ -303,9 +352,14 @@ class MainActivity : AppCompatActivity() {
                             viewModel.insertBookmark(bookmark)
                         }
                         runOnUiThread {
+                            val fileType = when {
+                                isHtml -> "HTML"
+                                isCsv -> "CSV"
+                                else -> ""
+                            }
                             Toast.makeText(
                                 this@MainActivity,
-                                "${getString(R.string.import_success)}: ${bookmarks.size} segnalibri importati",
+                                "${getString(R.string.import_success)}: ${bookmarks.size} segnalibri importati da file $fileType",
                                 Toast.LENGTH_SHORT
                             ).show()
                         }
@@ -324,6 +378,33 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, "Permesso negato per accedere al file. Assicurati di aver concesso i permessi necessari.", Toast.LENGTH_LONG).show()
         } catch (e: Exception) {
             Toast.makeText(this, "${getString(R.string.error)}: ${e.message}", Toast.LENGTH_LONG).show()
+        }
+    }
+    
+    private fun getFileName(uri: Uri): String? {
+        return try {
+            var result: String? = null
+            if (uri.scheme == "content") {
+                val cursor = contentResolver.query(uri, null, null, null, null)
+                cursor?.use {
+                    if (it.moveToFirst()) {
+                        val nameIndex = it.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                        if (nameIndex >= 0) {
+                            result = it.getString(nameIndex)
+                        }
+                    }
+                }
+            }
+            if (result == null) {
+                result = uri.path
+                val cut = result?.lastIndexOf('/')
+                if (cut != -1) {
+                    result = result?.substring(cut!! + 1)
+                }
+            }
+            result
+        } catch (e: Exception) {
+            null
         }
     }
 

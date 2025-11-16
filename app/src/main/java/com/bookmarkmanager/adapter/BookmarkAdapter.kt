@@ -10,7 +10,8 @@ import com.bookmarkmanager.databinding.ItemBookmarkBinding
 
 class BookmarkAdapter(
     private val onEditClick: (Bookmark) -> Unit,
-    private val onDeleteClick: (Bookmark) -> Unit
+    private val onDeleteClick: (Bookmark) -> Unit,
+    private val onItemClick: (Bookmark) -> Unit
 ) : ListAdapter<Bookmark, BookmarkAdapter.BookmarkViewHolder>(BookmarkDiffCallback()) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): BookmarkViewHolder {
@@ -43,8 +44,7 @@ class BookmarkAdapter(
             }
 
             binding.root.setOnClickListener {
-                // Open URL in browser
-                // This can be implemented later if needed
+                onItemClick(bookmark)
             }
         }
     }

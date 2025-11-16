@@ -1,6 +1,7 @@
 package com.bookmarkmanager
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
@@ -77,6 +78,7 @@ class MainActivity : AppCompatActivity() {
         setupSearch()
         setupButtons()
         observeBookmarks()
+        handleSharedIntent(intent)
 
         ViewCompat.setOnApplyWindowInsetsListener(binding.root) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
@@ -88,7 +90,8 @@ class MainActivity : AppCompatActivity() {
     private fun setupRecyclerView() {
         adapter = BookmarkAdapter(
             onEditClick = { bookmark -> showBookmarkDialog(bookmark) },
-            onDeleteClick = { bookmark -> deleteBookmark(bookmark) }
+            onDeleteClick = { bookmark -> deleteBookmark(bookmark) },
+            onItemClick = { bookmark -> openUrlInBrowser(bookmark.url) }
         )
         binding.recyclerView.layoutManager = LinearLayoutManager(this)
         binding.recyclerView.adapter = adapter
@@ -326,6 +329,97 @@ class MainActivity : AppCompatActivity() {
         } catch (e: Exception) {
             Toast.makeText(this, "${getString(R.string.error)}: ${e.message}", Toast.LENGTH_LONG).show()
         }
+    }
+
+    private fun openUrlInBrowser(url: String) {
+        try {
+            val normalizedUrl = if (!url.startsWith("http://") && !url.startsWith("https://")) {
+                "https://$url"
+            } else {
+                url
+            }
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(normalizedUrl))
+            startActivity(intent)
+        } catch (e: Exception) {
+            Toast.makeText(this, "Impossibile aprire l'URL: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun handleSharedIntent(intent: Intent?) {
+        when (intent?.action) {
+            Intent.ACTION_SEND -> {
+                if (intent.type == "text/plain") {
+                    val sharedText = intent.getStringExtra(Intent.EXTRA_TEXT)
+                    if (!sharedText.isNullOrBlank()) {
+                        // Estrai URL dal testo condiviso
+                        val url = extractUrlFromText(sharedText)
+                        if (url != null) {
+                            showShareDialog(url)
+                        } else {
+                            Toast.makeText(this, "Nessun URL valido trovato nel testo condiviso", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun extractUrlFromText(text: String): String? {
+        // Cerca URL nel testo (http://, https://, o www.)
+        val urlPattern = Regex("""(https?://[^\s]+|www\.[^\s]+)""", RegexOption.IGNORE_CASE)
+        val match = urlPattern.find(text)
+        return match?.value?.let { url ->
+            // Aggiungi https:// se manca
+            if (url.startsWith("www.", ignoreCase = true)) {
+                "https://$url"
+            } else {
+                url
+            }
+        }
+    }
+
+    private fun showShareDialog(url: String) {
+        val dialogBinding = DialogBookmarkBinding.inflate(layoutInflater)
+        dialogBinding.urlEditText.setText(url)
+        dialogBinding.urlEditText.isEnabled = false // L'URL è già impostato, non modificabile
+
+        val dialog = MaterialAlertDialogBuilder(this)
+            .setTitle(getString(R.string.add_bookmark))
+            .setMessage("Inserisci un titolo per questo segnalibro")
+            .setView(dialogBinding.root)
+            .setCancelable(true)
+            .create()
+
+        dialogBinding.saveButton.setOnClickListener {
+            val title = dialogBinding.titleEditText.text?.toString()?.trim() ?: ""
+
+            if (title.isEmpty()) {
+                Toast.makeText(this, getString(R.string.title_required), Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            val normalizedUrl = if (!url.startsWith("http://") && !url.startsWith("https://")) {
+                "https://$url"
+            } else {
+                url
+            }
+
+            viewModel.insertBookmark(Bookmark(title = title, url = normalizedUrl))
+            Toast.makeText(this, getString(R.string.bookmark_added), Toast.LENGTH_SHORT).show()
+            dialog.dismiss()
+        }
+
+        dialogBinding.cancelButton.setOnClickListener {
+            dialog.dismiss()
+        }
+
+        dialog.show()
+    }
+
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleSharedIntent(intent)
     }
 }
 

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Bookmark Manager</string>
+    <string name="add_bookmark">Aggiungi Segnalibro</string>
+    <string name="search_hint">Cerca per titolo o URL...</string>
+    <string name="title">Titolo</string>
+    <string name="url">URL</string>
+    <string name="save">Salva</string>
+    <string name="cancel">Annulla</string>
+    <string name="delete">Elimina</string>
+    <string name="edit">Modifica</string>
+    <string name="export">Esporta CSV</string>
+    <string name="importcsv">Importa CSV</string>
+    <string name="no_bookmarks">Nessun segnalibro</string>
+    <string name="bookmark_added">Segnalibro aggiunto</string>
+    <string name="bookmark_updated">Segnalibro aggiornato</string>
+    <string name="bookmark_deleted">Segnalibro eliminato</string>
+    <string name="export_success">Esportazione completata</string>
+    <string name="import_success">Importazione completata</string>
+    <string name="error">Errore</string>
+    <string name="invalid_url">URL non valido</string>
+    <string name="title_required">Il titolo è obbligatorio</string>
+    <string name="url_required">L\'URL è obbligatorio</string>
+</resources>
+

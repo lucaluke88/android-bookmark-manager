@@ -1,0 +1,44 @@
+package com.bookmarkmanager.viewmodel
+
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import com.bookmarkmanager.data.Bookmark
+import com.bookmarkmanager.data.BookmarkDatabase
+import com.bookmarkmanager.repository.BookmarkRepository
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.launch
+
+class BookmarkViewModel(application: Application) : AndroidViewModel(application) {
+    private val repository: BookmarkRepository
+
+    init {
+        val bookmarkDao = BookmarkDatabase.getDatabase(application).bookmarkDao()
+        repository = BookmarkRepository(bookmarkDao)
+    }
+
+    fun getAllBookmarks(): Flow<List<Bookmark>> = repository.getAllBookmarks()
+
+    fun searchBookmarks(query: String): Flow<List<Bookmark>> = repository.searchBookmarks(query)
+
+    fun insertBookmark(bookmark: Bookmark) {
+        viewModelScope.launch {
+            repository.insertBookmark(bookmark)
+        }
+    }
+
+    fun updateBookmark(bookmark: Bookmark) {
+        viewModelScope.launch {
+            repository.updateBookmark(bookmark)
+        }
+    }
+
+    fun deleteBookmark(bookmark: Bookmark) {
+        viewModelScope.launch {
+            repository.deleteBookmark(bookmark)
+        }
+    }
+
+    suspend fun getAllBookmarksList(): List<Bookmark> = repository.getAllBookmarksList()
+}
+

@@ -27,6 +27,10 @@ class BookmarkViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    suspend fun insertBookmarks(bookmarks: List<Bookmark>) {
+        repository.insertBookmarks(bookmarks)
+    }
+
     fun updateBookmark(bookmark: Bookmark) {
         viewModelScope.launch {
             repository.updateBookmark(bookmark)
@@ -40,5 +44,7 @@ class BookmarkViewModel(application: Application) : AndroidViewModel(application
     }
 
     suspend fun getAllBookmarksList(): List<Bookmark> = repository.getAllBookmarksList()
+
+    suspend fun getBookmarkCount(): Int = repository.getBookmarkCount()
 }
 

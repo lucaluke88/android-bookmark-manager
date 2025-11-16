@@ -14,6 +14,8 @@ class BookmarkRepository(private val bookmarkDao: BookmarkDao) {
 
     suspend fun insertBookmark(bookmark: Bookmark): Long = bookmarkDao.insertBookmark(bookmark)
 
+    suspend fun insertBookmarks(bookmarks: List<Bookmark>) = bookmarkDao.insertBookmarks(bookmarks)
+
     suspend fun updateBookmark(bookmark: Bookmark) = bookmarkDao.updateBookmark(bookmark)
 
     suspend fun deleteBookmark(bookmark: Bookmark) = bookmarkDao.deleteBookmark(bookmark)
@@ -21,5 +23,7 @@ class BookmarkRepository(private val bookmarkDao: BookmarkDao) {
     suspend fun deleteAllBookmarks() = bookmarkDao.deleteAllBookmarks()
 
     suspend fun getAllBookmarksList(): List<Bookmark> = bookmarkDao.getAllBookmarksList()
+
+    suspend fun getBookmarkCount(): Int = bookmarkDao.getBookmarkCount()
 }
 

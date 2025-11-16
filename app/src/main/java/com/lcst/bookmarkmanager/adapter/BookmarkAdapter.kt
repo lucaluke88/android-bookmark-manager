@@ -51,7 +51,12 @@ class BookmarkAdapter(
 
     class BookmarkDiffCallback : DiffUtil.ItemCallback<Bookmark>() {
         override fun areItemsTheSame(oldItem: Bookmark, newItem: Bookmark): Boolean {
-            return oldItem.id == newItem.id
+            // Se entrambi hanno id = 0, usa title+url come identificatore univoco
+            return if (oldItem.id == 0L && newItem.id == 0L) {
+                oldItem.title == newItem.title && oldItem.url == newItem.url
+            } else {
+                oldItem.id == newItem.id && oldItem.id != 0L
+            }
         }
 
         override fun areContentsTheSame(oldItem: Bookmark, newItem: Bookmark): Boolean {

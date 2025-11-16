@@ -28,6 +28,8 @@ import com.lcst.bookmarkmanager.viewmodel.BookmarkViewModel
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
 import java.io.InputStream
 import java.io.OutputStream
 
@@ -67,6 +69,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private var pendingFileOperation: (() -> Unit)? = null
+    private var searchJob: kotlinx.coroutines.Job? = null
+    private var observationJob: kotlinx.coroutines.Job? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -96,6 +100,8 @@ class MainActivity : AppCompatActivity() {
         )
         binding.recyclerView.layoutManager = LinearLayoutManager(this)
         binding.recyclerView.adapter = adapter
+        binding.recyclerView.setHasFixedSize(false) // Deve essere false quando dentro NestedScrollView
+        android.util.Log.d("MainActivity", "RecyclerView inizializzato, adapter: ${adapter.itemCount} item")
     }
 
     private fun setupSearch() {
@@ -103,11 +109,19 @@ class MainActivity : AppCompatActivity() {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
             override fun afterTextChanged(s: Editable?) {
+                // Cancella la ricerca precedente
+                searchJob?.cancel()
+                
                 val query = s?.toString() ?: ""
-                if (query.isEmpty()) {
-                    observeBookmarks()
-                } else {
-                    observeSearchResults(query)
+                
+                // Debounce: aspetta 300ms prima di eseguire la ricerca
+                searchJob = lifecycleScope.launch {
+                    kotlinx.coroutines.delay(300)
+                    if (query.isEmpty()) {
+                        observeBookmarks()
+                    } else {
+                        observeSearchResults(query)
+                    }
                 }
             }
         })
@@ -136,21 +150,55 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun observeBookmarks() {
-        lifecycleScope.launch {
+        // Cancella l'osservazione precedente per evitare osservazioni multiple
+        observationJob?.cancel()
+        observationJob = lifecycleScope.launch {
             viewModel.getAllBookmarks().collectLatest { bookmarks: List<Bookmark> ->
-                adapter.submitList(bookmarks)
-                binding.emptyTextView.visibility =
-                    if (bookmarks.isEmpty()) View.VISIBLE else View.GONE
+                android.util.Log.d("MainActivity", "Bookmark ricevuti dal Flow: ${bookmarks.size}")
+                if (bookmarks.isNotEmpty()) {
+                    android.util.Log.d("MainActivity", "Primo bookmark: ${bookmarks.first().title} -> ${bookmarks.first().url}")
+                }
+                
+                // Assicurati di essere sul thread principale per l'aggiornamento UI
+                withContext(Dispatchers.Main) {
+                    android.util.Log.d("MainActivity", "Chiamata submitList con ${bookmarks.size} bookmark")
+                    val currentItemCount = adapter.itemCount
+                    android.util.Log.d("MainActivity", "Item count prima di submitList: $currentItemCount")
+                    
+                    adapter.submitList(bookmarks) {
+                        android.util.Log.d("MainActivity", "Callback submitList eseguito. Item count dopo: ${adapter.itemCount}")
+                        binding.emptyTextView.visibility =
+                            if (bookmarks.isEmpty()) View.VISIBLE else View.GONE
+                        binding.recyclerView.visibility =
+                            if (bookmarks.isEmpty()) View.GONE else View.VISIBLE
+                        
+                        // Forza il layout del RecyclerView
+                        binding.recyclerView.requestLayout()
+                    }
+                    
+                    android.util.Log.d("MainActivity", "submitList chiamato, item count immediato: ${adapter.itemCount}")
+                }
             }
         }
     }
 
     private fun observeSearchResults(query: String) {
-        lifecycleScope.launch {
+        // Cancella l'osservazione precedente per evitare osservazioni multiple
+        observationJob?.cancel()
+        observationJob = lifecycleScope.launch {
             viewModel.searchBookmarks(query).collectLatest { bookmarks: List<Bookmark> ->
-                adapter.submitList(bookmarks)
-                binding.emptyTextView.visibility =
-                    if (bookmarks.isEmpty()) View.VISIBLE else View.GONE
+                android.util.Log.d("MainActivity", "Risultati ricerca: ${bookmarks.size} bookmark per query '$query'")
+                
+                // Assicurati di essere sul thread principale per l'aggiornamento UI
+                withContext(Dispatchers.Main) {
+                    adapter.submitList(bookmarks) {
+                        binding.emptyTextView.visibility =
+                            if (bookmarks.isEmpty()) View.VISIBLE else View.GONE
+                        binding.recyclerView.visibility =
+                            if (bookmarks.isEmpty()) View.GONE else View.VISIBLE
+                        binding.recyclerView.requestLayout()
+                    }
+                }
             }
         }
     }
@@ -284,100 +332,179 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun importFromFile(uri: Uri) {
-        try {
-            val fileName = getFileName(uri)
-            
-            // Determina il tipo di file dall'estensione
-            val isHtml = fileName?.endsWith(".html", ignoreCase = true) == true || 
-                        fileName?.endsWith(".htm", ignoreCase = true) == true
-            val isCsv = fileName?.endsWith(".csv", ignoreCase = true) == true
-            
-            val inputStream = contentResolver.openInputStream(uri)
-            if (inputStream == null) {
-                Toast.makeText(this, "Impossibile aprire il file selezionato", Toast.LENGTH_LONG).show()
-                return
-            }
-            
-            inputStream.use { stream: InputStream ->
-                val bookmarks = try {
-                    when {
-                        isHtml -> HtmlUtil.importBookmarksFromChromeHtml(stream)
-                        isCsv -> CsvUtil.importBookmarks(stream)
-                        else -> {
-                            // Se l'estensione non è chiara, prova prima HTML poi CSV
-                            try {
-                                // Riapri lo stream per provare HTML
-                                val htmlStream = contentResolver.openInputStream(uri)
-                                htmlStream?.use { 
-                                    HtmlUtil.importBookmarksFromChromeHtml(it)
-                                } ?: throw Exception("Impossibile aprire il file")
-                            } catch (e: Exception) {
-                                // Se HTML fallisce, prova CSV
-                                val csvStream = contentResolver.openInputStream(uri)
-                                csvStream?.use { 
-                                    CsvUtil.importBookmarks(it)
+        // Mostra progress dialog immediatamente
+        val progressDialog = MaterialAlertDialogBuilder(this)
+            .setTitle("Importazione in corso")
+            .setMessage("Lettura e parsing del file...")
+            .setCancelable(false)
+            .create()
+            .also { it.show() }
+        
+        lifecycleScope.launch {
+            try {
+                // Tutto il lavoro pesante su Dispatchers.IO
+                val bookmarks = withContext(Dispatchers.IO) {
+                    val fileName = getFileName(uri)
+                    android.util.Log.d("Import", "File selezionato: $fileName, URI: $uri")
+                    
+                    // Determina il tipo di file dall'estensione
+                    val isHtml = fileName?.endsWith(".html", ignoreCase = true) == true || 
+                                fileName?.endsWith(".htm", ignoreCase = true) == true
+                    val isCsv = fileName?.endsWith(".csv", ignoreCase = true) == true
+                    
+                    android.util.Log.d("Import", "Tipo file rilevato - HTML: $isHtml, CSV: $isCsv")
+                    
+                    val inputStream = contentResolver.openInputStream(uri)
+                    if (inputStream == null) {
+                        throw Exception("Impossibile aprire il file selezionato")
+                    }
+                    
+                    try {
+                        when {
+                            isHtml -> {
+                                android.util.Log.d("Import", "Tentativo import HTML")
+                                HtmlUtil.importBookmarksFromChromeHtml(inputStream)
+                            }
+                            isCsv -> {
+                                android.util.Log.d("Import", "Tentativo import CSV")
+                                CsvUtil.importBookmarks(inputStream)
+                            }
+                            else -> {
+                                // Se l'estensione non è chiara, rileva dal contenuto
+                                android.util.Log.d("Import", "Estensione non chiara, rilevazione dal contenuto")
+                                val contentPreview = inputStream.bufferedReader(Charsets.UTF_8).use { 
+                                    val buffer = CharArray(1024)
+                                    it.read(buffer, 0, 1024)
+                                    String(buffer)
+                                }
+                                
+                                val isHtmlContent = contentPreview.contains("<!DOCTYPE", ignoreCase = true) ||
+                                                  contentPreview.contains("<DT><A", ignoreCase = true) ||
+                                                  contentPreview.contains("NETSCAPE-Bookmark", ignoreCase = true)
+                                
+                                android.util.Log.d("Import", "Contenuto rilevato come HTML: $isHtmlContent")
+                                
+                                // Riapri lo stream per l'importazione
+                                val importStream = contentResolver.openInputStream(uri)
+                                importStream?.use { importS ->
+                                    if (isHtmlContent) {
+                                        HtmlUtil.importBookmarksFromChromeHtml(importS)
+                                    } else {
+                                        CsvUtil.importBookmarks(importS)
+                                    }
                                 } ?: throw Exception("Impossibile aprire il file")
                             }
                         }
-                    }
-                } catch (e: Exception) {
-                    // Se il parsing fallisce, prova l'altro formato come fallback
-                    try {
-                        val fallbackStream = contentResolver.openInputStream(uri)
-                        fallbackStream?.use { fallback ->
-                            if (isHtml) {
-                                CsvUtil.importBookmarks(fallback)
-                            } else {
-                                HtmlUtil.importBookmarksFromChromeHtml(fallback)
-                            }
-                        } ?: throw Exception("Impossibile aprire il file")
-                    } catch (fallbackException: Exception) {
-                        throw Exception("Impossibile importare il file. Formato non supportato o file corrotto.")
+                    } catch (e: Exception) {
+                        android.util.Log.e("Import", "Errore parsing: ${e.message}", e)
+                        // Se il parsing fallisce, prova l'altro formato come fallback
+                        try {
+                            android.util.Log.d("Import", "Tentativo fallback con formato alternativo")
+                            val fallbackStream = contentResolver.openInputStream(uri)
+                            fallbackStream?.use { fallback ->
+                                if (isHtml) {
+                                    CsvUtil.importBookmarks(fallback)
+                                } else {
+                                    HtmlUtil.importBookmarksFromChromeHtml(fallback)
+                                }
+                            } ?: throw Exception("Impossibile aprire il file")
+                        } catch (fallbackException: Exception) {
+                            android.util.Log.e("Import", "Errore fallback: ${fallbackException.message}", fallbackException)
+                            throw Exception("Impossibile importare il file. Formato non supportato o file corrotto: ${e.message}")
+                        }
+                    } finally {
+                        inputStream.close()
                     }
                 }
+                
+                android.util.Log.d("Import", "Bookmark parsati: ${bookmarks.size}")
                 
                 if (bookmarks.isEmpty()) {
                     val fileType = when {
-                        isHtml -> "HTML"
-                        isCsv -> "CSV"
+                        uri.toString().contains(".html", ignoreCase = true) -> "HTML"
+                        uri.toString().contains(".csv", ignoreCase = true) -> "CSV"
                         else -> ""
                     }
-                    Toast.makeText(this, "Nessun segnalibro trovato nel file $fileType", Toast.LENGTH_SHORT).show()
-                    return@use
+                    withContext(Dispatchers.Main) {
+                        progressDialog.dismiss()
+                        Toast.makeText(this@MainActivity, "Nessun segnalibro trovato nel file $fileType", Toast.LENGTH_SHORT).show()
+                    }
+                    return@launch
                 }
                 
-                lifecycleScope.launch {
-                    try {
-                        bookmarks.forEach { bookmark ->
-                            viewModel.insertBookmark(bookmark)
-                        }
-                        runOnUiThread {
-                            val fileType = when {
-                                isHtml -> "HTML"
-                                isCsv -> "CSV"
-                                else -> ""
-                            }
-                            Toast.makeText(
-                                this@MainActivity,
-                                "${getString(R.string.import_success)}: ${bookmarks.size} segnalibri importati da file $fileType",
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        }
-                    } catch (e: Exception) {
-                        runOnUiThread {
-                            Toast.makeText(
-                                this@MainActivity,
-                                "Errore durante l'importazione: ${e.message}",
-                                Toast.LENGTH_LONG
-                            ).show()
-                        }
+                // Aggiorna il progress dialog
+                withContext(Dispatchers.Main) {
+                    progressDialog.setMessage("Sto importando ${bookmarks.size} segnalibri nel database...")
+                }
+                
+                // Inserimento nel database (già su Dispatchers.IO dalla coroutine)
+                android.util.Log.d("Import", "Inizio inserimento ${bookmarks.size} bookmark nel database")
+                android.util.Log.d("Import", "Primo bookmark esempio: ${bookmarks.firstOrNull()?.title} -> ${bookmarks.firstOrNull()?.url}")
+                
+                try {
+                    viewModel.insertBookmarks(bookmarks)
+                    android.util.Log.d("Import", "Inserimento completato")
+                    
+                    // Verifica che i bookmark siano stati inseriti
+                    val countAfter = viewModel.getBookmarkCount()
+                    val listAfter = viewModel.getAllBookmarksList()
+                    android.util.Log.d("Import", "Bookmark nel database dopo inserimento: count=$countAfter, list size=${listAfter.size}")
+                    
+                    if (listAfter.isNotEmpty()) {
+                        android.util.Log.d("Import", "Primo bookmark nel DB: ${listAfter.first().title} -> ${listAfter.first().url}")
                     }
+                    
+                    if (countAfter == 0 || listAfter.isEmpty()) {
+                        android.util.Log.e("Import", "ERRORE: Nessun bookmark nel database dopo l'inserimento!")
+                        throw Exception("Inserimento fallito: nessun bookmark nel database (count=$countAfter, list size=${listAfter.size})")
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("Import", "Errore durante l'inserimento: ${e.message}", e)
+                    throw e
+                }
+                
+                // Piccolo delay per assicurarsi che Room abbia completato la transazione
+                kotlinx.coroutines.delay(200)
+                
+                withContext(Dispatchers.Main) {
+                    progressDialog.dismiss()
+                    
+                    // Cancella il debounce job per evitare conflitti
+                    searchJob?.cancel()
+                    
+                    // Pulisci la ricerca per mostrare tutti i bookmark
+                    binding.searchEditText.setText("")
+                    
+                    // Riattiva l'osservazione per aggiornare la lista
+                    // Room emetterà automaticamente i nuovi valori tramite Flow
+                    // Non serve chiamare observeBookmarks() esplicitamente se l'osservazione è già attiva
+                    // Ma lo facciamo per essere sicuri che la lista si aggiorni
+                    observeBookmarks()
+                    
+                    val fileType = when {
+                        uri.toString().contains(".html", ignoreCase = true) -> "HTML"
+                        uri.toString().contains(".csv", ignoreCase = true) -> "CSV"
+                        else -> "sconosciuto"
+                    }
+                    Toast.makeText(
+                        this@MainActivity,
+                        "${getString(R.string.import_success)}: ${bookmarks.size} segnalibri importati da file $fileType",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            } catch (e: SecurityException) {
+                android.util.Log.e("Import", "SecurityException: ${e.message}", e)
+                withContext(Dispatchers.Main) {
+                    progressDialog.dismiss()
+                    Toast.makeText(this@MainActivity, "Permesso negato per accedere al file. Assicurati di aver concesso i permessi necessari.", Toast.LENGTH_LONG).show()
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("Import", "Exception: ${e.message}", e)
+                withContext(Dispatchers.Main) {
+                    progressDialog.dismiss()
+                    Toast.makeText(this@MainActivity, "${getString(R.string.error)}: ${e.message}", Toast.LENGTH_LONG).show()
                 }
             }
-        } catch (e: SecurityException) {
-            Toast.makeText(this, "Permesso negato per accedere al file. Assicurati di aver concesso i permessi necessari.", Toast.LENGTH_LONG).show()
-        } catch (e: Exception) {
-            Toast.makeText(this, "${getString(R.string.error)}: ${e.message}", Toast.LENGTH_LONG).show()
         }
     }
     

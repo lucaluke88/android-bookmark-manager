@@ -15,8 +15,14 @@ interface BookmarkDao {
     @Query("SELECT * FROM bookmarks ORDER BY title ASC")
     suspend fun getAllBookmarksList(): List<Bookmark>
 
+    @Query("SELECT COUNT(*) FROM bookmarks")
+    suspend fun getBookmarkCount(): Int
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertBookmark(bookmark: Bookmark): Long
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertBookmarks(bookmarks: List<Bookmark>)
 
     @Update
     suspend fun updateBookmark(bookmark: Bookmark)

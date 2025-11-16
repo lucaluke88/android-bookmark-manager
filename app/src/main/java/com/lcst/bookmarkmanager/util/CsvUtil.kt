@@ -20,25 +20,49 @@ object CsvUtil {
 
     fun importBookmarks(inputStream: InputStream): List<Bookmark> {
         val bookmarks = mutableListOf<Bookmark>()
-        Scanner(inputStream).use { scanner ->
-            // Skip header if present
-            if (scanner.hasNextLine()) {
-                val firstLine = scanner.nextLine().trim()
-                if (firstLine.equals(CSV_HEADER, ignoreCase = true)) {
-                    // Header found, continue
-                } else {
-                    // No header, process first line as data
-                    parseCsvLine(firstLine)?.let { bookmarks.add(it) }
+        try {
+            // Usa BufferedReader per gestire meglio l'encoding
+            inputStream.bufferedReader(Charsets.UTF_8).use { reader ->
+                var lineNumber = 0
+                var isFirstLine = true
+                
+                reader.forEachLine { line ->
+                    lineNumber++
+                    val trimmedLine = line.trim()
+                    
+                    if (trimmedLine.isEmpty()) {
+                        return@forEachLine
+                    }
+                    
+                    if (isFirstLine) {
+                        isFirstLine = false
+                        // Controlla se è l'header
+                        if (trimmedLine.equals(CSV_HEADER, ignoreCase = true) ||
+                            trimmedLine.replace(" ", "").equals(CSV_HEADER.replace(" ", ""), ignoreCase = true)) {
+                            android.util.Log.d("CsvUtil", "Header trovato, skip")
+                            return@forEachLine
+                        }
+                    }
+                    
+                    val bookmark = parseCsvLine(trimmedLine)
+                    if (bookmark != null) {
+                        bookmarks.add(bookmark)
+                        // Log solo ogni 100 bookmark per non rallentare
+                        if (lineNumber % 100 == 0) {
+                            android.util.Log.d("CsvUtil", "Bookmark parsati: $lineNumber")
+                        }
+                    } else if (lineNumber <= 10) {
+                        // Log solo i primi 10 errori per non rallentare
+                        android.util.Log.w("CsvUtil", "Linea $lineNumber non parsata: $trimmedLine")
+                    }
                 }
             }
-
-            while (scanner.hasNextLine()) {
-                val line = scanner.nextLine().trim()
-                if (line.isNotEmpty()) {
-                    parseCsvLine(line)?.let { bookmarks.add(it) }
-                }
-            }
+        } catch (e: Exception) {
+            android.util.Log.e("CsvUtil", "Errore durante l'import CSV: ${e.message}", e)
+            throw Exception("Errore durante il parsing del file CSV: ${e.message}", e)
         }
+        
+        android.util.Log.d("CsvUtil", "Totale bookmark importati: ${bookmarks.size}")
         return bookmarks
     }
 
@@ -46,10 +70,17 @@ object CsvUtil {
         return try {
             val parts = parseCsvFields(line)
             if (parts.size >= 2) {
-                Bookmark(
-                    title = unescapeCsv(parts[0]),
-                    url = unescapeCsv(parts[1])
-                )
+                val title = unescapeCsv(parts[0].trim())
+                val url = unescapeCsv(parts[1].trim())
+                
+                if (title.isNotEmpty() && url.isNotEmpty()) {
+                    Bookmark(
+                        title = title,
+                        url = url
+                    )
+                } else {
+                    null
+                }
             } else {
                 null
             }

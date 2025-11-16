@@ -113,10 +113,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupButtons() {
-        binding.addButton.setOnClickListener {
-            showBookmarkDialog()
-        }
-
         binding.fab.setOnClickListener {
             showBookmarkDialog()
         }

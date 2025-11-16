@@ -46,31 +46,13 @@
 
             </com.google.android.material.textfield.TextInputLayout>
 
-            <LinearLayout
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/exportButton"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginBottom="16dp">
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/addButton"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="@string/add_bookmark"
-                    android:layout_marginEnd="8dp"
-                    style="@style/Widget.Material3.Button" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/exportButton"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="@string/export"
-                    android:layout_marginStart="8dp"
-                    style="@style/Widget.Material3.Button.OutlinedButton" />
-
-            </LinearLayout>
+                android:text="@string/export"
+                android:layout_marginBottom="16dp"
+                style="@style/Widget.Material3.Button.OutlinedButton" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/importButton"

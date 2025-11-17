@@ -1,39 +1,43 @@
 # Bookmark Manager
 
-**Autore:** LCST  
-**Versione:** 3.0
+**Author:** LCST  
+**Version:** 3.0
 
-Un'applicazione Android per gestire i segnalibri del browser con supporto per import/export CSV, ricerca e Material Design 3 con modalità AMOLED.
+An Android application for managing browser bookmarks with support for CSV import/export, search, and Material Design 3 with AMOLED mode.
 
-## Caratteristiche
+## Features
 
-- ✅ **Gestione Segnalibri**: Aggiungi, modifica ed elimina segnalibri con titolo e URL
-- ✅ **Ricerca**: Cerca segnalibri per titolo o URL in tempo reale
-- ✅ **Import/Export CSV**: Importa ed esporta i tuoi segnalibri in formato CSV
-- ✅ **Material Design 3**: Interfaccia moderna con Material Design 3
-- ✅ **Modalità AMOLED**: Supporto nativo per dark mode ottimizzata per schermi AMOLED
-- ✅ **Compatibilità**: Supporta Android 19 (API level 19, Android 4.4 KitKat) e versioni successive
+- ✅ **Bookmark Management**: Add, edit, and delete bookmarks with title and URL
+- ✅ **Search**: Search bookmarks by title or URL in real-time
+- ✅ **CSV Import/Export**: Import and export your bookmarks in CSV format
+- ✅ **HTML Import**: Import bookmarks from Chrome's HTML export file
+- ✅ **Material Design 3**: Modern interface with Material Design 3
+- ✅ **AMOLED Mode**: Native support for dark mode optimized for AMOLED screens
+- ✅ **Share Intent**: Receive URLs shared from other apps and save them as bookmarks
+- ✅ **Open in Browser**: Open bookmarks directly in the default system browser
+- ✅ **Compatibility**: Supports Android 19 (API level 19, Android 4.4 KitKat) and later versions
 
-## Tecnologie Utilizzate
+## Technologies Used
 
-- **Kotlin**: Linguaggio di programmazione
-- **Room Database**: Persistenza dati locale
-- **Material Design 3**: Libreria UI moderna
-- **Coroutines & Flow**: Programmazione asincrona
-- **ViewBinding**: Binding delle view
-- **MVVM Architecture**: Pattern architetturale
+- **Kotlin**: Programming language
+- **Room Database**: Local data persistence
+- **Material Design 3**: Modern UI library
+- **Coroutines & Flow**: Asynchronous programming
+- **ViewBinding**: View binding
+- **MVVM Architecture**: Architectural pattern
+- **KSP**: Kotlin Symbol Processing for annotation processing
 
-## Struttura del Progetto
+## Project Structure
 
 ```
 app/
 ├── src/main/
-│   ├── java/com/bookmarkmanager/
+│   ├── java/com/lcst/bookmarkmanager/
 │   │   ├── data/              # Room entities, DAO, Database
 │   │   ├── repository/         # Repository pattern
 │   │   ├── viewmodel/          # ViewModels
 │   │   ├── adapter/            # RecyclerView adapters
-│   │   ├── util/               # Utility classes (CSV)
+│   │   ├── util/               # Utility classes (CSV, HTML)
 │   │   └── MainActivity.kt     # Main activity
 │   ├── res/
 │   │   ├── layout/             # XML layouts
@@ -43,42 +47,52 @@ app/
 └── build.gradle.kts
 ```
 
-## Come Compilare
+## How to Build
 
-1. Apri il progetto in Android Studio
-2. Sincronizza i file Gradle
-3. Compila ed esegui l'app su un dispositivo o emulatore
+1. Open the project in Android Studio
+2. Sync Gradle files
+3. Build and run the app on a device or emulator
 
-## Requisiti
+## Requirements
 
-- Android Studio Hedgehog o superiore
-- Min SDK: 19 (Android 4.4 KitKat) - Nota: le librerie moderne (Material Design 3, Lifecycle) richiedono almeno API 19
+- Android Studio Hedgehog or later
+- Min SDK: 19 (Android 4.4 KitKat) - Note: modern libraries (Material Design 3, Lifecycle) require at least API 19
 - Target SDK: 34 (Android 14)
 - Kotlin 1.9.20+
 
-## Funzionalità Dettagliate
+## Detailed Features
 
-### Gestione Segnalibri
-- Aggiungi nuovi segnalibri con titolo e URL
-- Modifica segnalibri esistenti
-- Elimina segnalibri con conferma
+### Bookmark Management
+- Add new bookmarks with title and URL
+- Edit existing bookmarks
+- Delete bookmarks with confirmation
 
-### Ricerca
-- Ricerca in tempo reale mentre digiti
-- Cerca sia nel titolo che nell'URL
+### Search
+- Real-time search as you type
+- Search both in title and URL
 - Case-insensitive
 
-### Import/Export CSV
-- Formato CSV standard con header "Title,URL"
-- Supporto per quote escaping
-- Compatibile con altri gestori di segnalibri
+### CSV Import/Export
+- Standard CSV format with "Title,URL" header
+- Support for quote escaping
+- Compatible with other bookmark managers
 
-### Tema AMOLED
-- Sfondo nero puro (#000000) in modalità dark
-- Ottimizzato per schermi AMOLED per risparmiare batteria
-- Transizione automatica tra light e dark mode
+### HTML Import
+- Import bookmarks from Chrome's HTML export file (`bookmarks.html`)
+- Automatically parses Chrome bookmark format
+- Handles HTML entities and URL normalization
 
-## Licenza
+### Share Intent
+- Appears as a share target from browsers
+- Captures shared URLs and prompts for a title
+- Saves shared URLs as new bookmarks
 
-Questo progetto è open source e disponibile per uso personale e commerciale.
+### AMOLED Theme
+- Pure black background (#000000) in dark mode
+- Optimized for AMOLED screens to save battery
+- Automatic transition between light and dark mode
+
+## License
+
+This project is open source and available for personal and commercial use.
 
